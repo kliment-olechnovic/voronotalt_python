@@ -1,0 +1,11 @@
+# Building 
+
+rm -r ./dist ./voronotalt.egg-info
+
+~/my-venv/bin/python3 -m build
+
+
+# Uploading only source package
+
+~/my-venv/bin/twine upload dist/voronotalt-0.9.5.post2.tar.gz --verbose
+

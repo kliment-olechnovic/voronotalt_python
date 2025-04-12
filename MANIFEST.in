@@ -3,4 +3,4 @@ include voronotalt.h
 include voronotalt_python.py
 include voronotalt_python_wrap.cxx
 include voronotalt_python_biotite.py
-recursive-include src *
+recursive-include cpp *
