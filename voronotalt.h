@@ -4,7 +4,9 @@
 #include <vector>
 #include <stdexcept>
 
+#ifndef SWIG
 #include "voronotalt/voronotalt.h"
+#endif
 
 struct Ball
 {
