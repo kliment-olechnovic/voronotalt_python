@@ -4,6 +4,7 @@ from setuptools import setup, Extension
 extra_compile_args = ["-O3"]
 if sys.platform.startswith("linux") or sys.platform == "darwin":
     extra_compile_args.append("-fPIC")
+    extra_compile_args.append("-std=c++11")
 
 voronotalt_module = Extension(
     name="_voronotalt_python",
