@@ -1,5 +1,5 @@
 import sys
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 
 extra_compile_args = ["-O3"]
 if sys.platform.startswith("linux") or sys.platform == "darwin":
@@ -7,7 +7,7 @@ if sys.platform.startswith("linux") or sys.platform == "darwin":
     extra_compile_args.append("-std=c++11")
 
 voronotalt_module = Extension(
-    name="_voronotalt_python",
+    name="voronotalt._voronotalt_python",
     sources=["voronotalt_python_wrap.cxx"],
     include_dirs=["cpp"],
     extra_compile_args=extra_compile_args,
@@ -16,7 +16,7 @@ voronotalt_module = Extension(
 
 setup(
     name="voronotalt",
-    version="0.9.5.post4",
+    version="0.9.5.post5",
     description="Voronota-LT Python bindings via SWIG",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
@@ -24,7 +24,7 @@ setup(
     author_email="kliment.olechnovic@gmail.com",
     url="https://github.com/kliment-olechnovic/voronotalt_python",
     ext_modules=[voronotalt_module],
-    py_modules=["voronotalt_python", "voronotalt_python_biotite"],
+    packages=find_packages(include=["voronotalt", "voronotalt.*"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: C++",

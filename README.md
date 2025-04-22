@@ -16,7 +16,7 @@ pip install voronotalt
 Voronota-LT can be used in Python code as in the following example:
 
 ```py
-import voronotalt_python as voronotalt
+import voronotalt
 
 balls = []
 balls.append(voronotalt.Ball(0, 0, 2, 1))
@@ -62,7 +62,7 @@ Voronota-LT can be used in Python code with Biotite as in the following example:
 
 ```py
 import argparse
-from voronotalt_python_biotite import radical_tessellation_from_atom_array
+from voronotalt.biotite_interface import radical_tessellation_from_atom_array
 from biotite.structure.io import load_structure
 
 # Parse command-line arguments

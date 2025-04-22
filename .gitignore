@@ -1,5 +1,6 @@
 /.project
 /__pycache__/
-/_voronotalt_python.so
+/voronotalt/__pycache__/
+/voronotalt/_voronotalt_python.so
 /dist/
 /voronotalt.egg-info/

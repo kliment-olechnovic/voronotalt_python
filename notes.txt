@@ -5,10 +5,11 @@ rm ./dist/*.tar.gz
 rm ./dist/*.whl
 
 ~/my-venv/bin/python3 -m build
+
 rm ./dist/*.whl
 
 # Uploading only source package
-#~/my-venv/bin/twine upload dist/voronotalt-0.9.5.post4.tar.gz --verbose
+#~/my-venv/bin/twine upload dist/voronotalt-0.9.5.post5.tar.gz --verbose
 
 # Unzipping wheel archives
 cd ./dist

@@ -1,4 +1,4 @@
-import voronotalt_python as voronotalt
+from . import voronotalt_python as voronotalt
 from biotite.structure import AtomArray
 from biotite.structure.info import vdw_radius_single
 
