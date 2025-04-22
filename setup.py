@@ -16,7 +16,7 @@ voronotalt_module = Extension(
 
 setup(
     name="voronotalt",
-    version="0.9.5.post3",
+    version="0.9.5.post4",
     description="Voronota-LT Python bindings via SWIG",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
