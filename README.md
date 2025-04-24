@@ -5,7 +5,7 @@ Voronota-LT is a C++ header-only library, and also a standalone command-line too
 
 ## Installation
 
-Install with pip using this command (it will download and build the C++ library):
+Install with pip using this command:
 
 ```bash
 pip install voronotalt
