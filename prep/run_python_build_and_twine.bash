@@ -4,7 +4,7 @@ cd "$(dirname $0)/.."
 
 set -e
 
-source ~/my-venv/bin/activate
+source ./workvenv/bin/activate
 
 rm -rf ./voronotalt.egg-info
 rm -f ./dist/*.tar.gz
