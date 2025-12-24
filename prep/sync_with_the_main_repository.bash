@@ -26,3 +26,7 @@ cp \
   "${MAINREPODIR}/swig/README.md" \
   "./"
 
+rm -r "./tests/input"
+cp -r \
+  "${MAINREPODIR}/swig/tests/input" \
+  "./tests/"
