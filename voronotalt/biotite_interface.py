@@ -1,55 +1,76 @@
-from . import voronotalt_python as voronotalt
+from . import voronotalt_python as _voronotalt_backend
 from biotite.structure import AtomArray
 from biotite.structure.info import vdw_radius_single
 
-def balls_from_atom_array(atom_array: AtomArray, include_hydrogens=False, default_radius=1.7):
-    """
-    Convert a Biotite AtomArray to a list of Voronota-LT Ball objects.
-
-    Parameters
-    ----------
-    atom_array : AtomArray
-        Input structure from Biotite.
-    include_hydrogens : bool
-        If False, skip atoms with element "H".
-    default_radius : float
-        Radius to assign when van der Waals radius is unknown.
-
-    Returns
-    -------
-    list of voronotalt.Ball
-        List of balls for RadicalTessellation.
-    """
+def simple_balls_from_atom_array(atom_array: AtomArray, include_heteroatoms=True, include_hydrogens=False, include_waters=False, default_radius=1.7):
     balls = []
     for atom in atom_array:
+        if not include_waters and atom.res_name in ("HOH", "WAT", "H2O"):
+            continue
+        
         if not include_hydrogens and atom.element == "H":
             continue
+        
+        if not include_heteroatoms and atom.hetero:
+            continue
+        
         x, y, z = map(float, atom.coord)
+        
         r = vdw_radius_single(atom.element)
         if r is None:
             r = default_radius
-        balls.append(voronotalt.Ball(x, y, z, float(r)))
+        
+        balls.append(_voronotalt_backend.Ball(x, y, z, float(r)))
     return balls
 
-def radical_tessellation_from_atom_array(atom_array: AtomArray, probe=1.4, **kwargs):
-    """
-    Create a RadicalTessellation from a Biotite AtomArray.
+def _from_simple_balls_from_biotite_atoms(
+        cls,
+        atom_array,
+        include_heteroatoms=True,
+        include_hydrogens=False,
+        include_waters=False,
+        default_radius=1.7,
+        **kwargs):
+    return cls(
+        simple_balls_from_atom_array(
+            atom_array,
+            include_heteroatoms=include_heteroatoms,
+            include_hydrogens=include_hydrogens,
+            include_waters=include_waters),
+        **kwargs)
 
-    Parameters
-    ----------
-    atom_array : AtomArray
-        The Biotite AtomArray to tessellate.
-    probe : float
-        Probe radius for SAS definition.
-    kwargs : dict
-        Additional arguments passed to balls_from_atom_array.
+_voronotalt_backend.RadicalTessellation.from_biotite_atoms = classmethod(_from_simple_balls_from_biotite_atoms)
 
-    Returns
-    -------
-    voronotalt.RadicalTessellation
-        The resulting tessellation object.
-    """
-    balls = balls_from_atom_array(atom_array, **kwargs)
-    return voronotalt.RadicalTessellation(balls, probe)
+def molecular_atom_balls_from_atom_array(atom_array: AtomArray, include_heteroatoms=True, include_hydrogens=False, include_waters=False):
+    balls = []
+    for atom in atom_array:
+        if not include_waters and atom.res_name in ("HOH", "WAT", "H2O"):
+            continue
+        
+        if not include_hydrogens and atom.element == "H":
+            continue
+        
+        if not include_heteroatoms and atom.hetero:
+            continue
+        
+        x, y, z = map(float, atom.coord)
+        balls.append(_voronotalt_backend.MolecularAtomBall(str(atom.chain_id), int(atom.res_id), str(atom.ins_code), str(atom.res_name), str(atom.atom_name), x, y, z))
+    return balls
 
+def _from_molecular_atom_balls_from_biotite_atoms(
+        cls,
+        atom_array,
+        include_heteroatoms=True,
+        include_hydrogens=False,
+        include_waters=False,
+        **kwargs):
+    return cls.from_atoms(
+        molecular_atom_balls_from_atom_array(
+            atom_array,
+            include_heteroatoms=include_heteroatoms,
+            include_hydrogens=include_hydrogens,
+            include_waters=include_waters),
+        **kwargs)
+
+_voronotalt_backend.MolecularRadicalTessellation.from_biotite_atoms = classmethod(_from_molecular_atom_balls_from_biotite_atoms)
 

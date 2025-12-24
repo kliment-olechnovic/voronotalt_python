@@ -5,6 +5,7 @@
 
 #include "spheres_container.h"
 #include "radical_tessellation_contact_construction.h"
+#include "subdivided_icosahedron_cut.h"
 #include "time_recorder.h"
 
 namespace voronotalt
@@ -191,6 +192,35 @@ public:
 		}
 	};
 
+	struct SiteContactDescriptorsSummary
+	{
+		Float area;
+		Float arc_length;
+		Float distance;
+		UnsignedInt id;
+		UnsignedInt count;
+
+		SiteContactDescriptorsSummary() noexcept :
+			area(FLOATCONST(0.0)),
+			arc_length(FLOATCONST(0.0)),
+			distance(FLOATCONST(-1.0)),
+			id(0),
+			count(0)
+		{
+		}
+
+		void add(const ContactDescriptorSummary& cds) noexcept
+		{
+			if(cds.area>FLOATCONST(0.0))
+			{
+				count++;
+				area+=cds.area;
+				arc_length+=cds.arc_length;
+				distance=((distance<FLOATCONST(0.0)) ? cds.distance : std::min(distance, cds.distance));
+			}
+		}
+	};
+
 	struct TotalContactDescriptorsSummary
 	{
 		Float area;
@@ -242,6 +272,33 @@ public:
 		}
 	};
 
+	struct TotalSiteContactDescriptorsSummary
+	{
+		Float area;
+		Float arc_length;
+		Float distance;
+		UnsignedInt count;
+
+		TotalSiteContactDescriptorsSummary() noexcept :
+			area(FLOATCONST(0.0)),
+			arc_length(FLOATCONST(0.0)),
+			distance(FLOATCONST(-1.0)),
+			count(0)
+		{
+		}
+
+		void add(const ContactDescriptorSummary& cds) noexcept
+		{
+			if(cds.area>FLOATCONST(0.0))
+			{
+				count++;
+				area+=cds.area;
+				arc_length+=cds.arc_length;
+				distance=((distance<FLOATCONST(0.0)) ? cds.distance : std::min(distance, cds.distance));
+			}
+		}
+	};
+
 	struct TessellationNet
 	{
 		std::vector<RadicalTessellationContactConstruction::TessellationVertex> tes_vertices;
@@ -262,6 +319,7 @@ public:
 		std::vector<ContactDescriptorSummary> contacts_summaries;
 		std::vector<ContactDescriptorSummaryAdjunct> adjuncts_for_contacts_summaries;
 		TotalContactDescriptorsSummary total_contacts_summary;
+		std::vector<SiteContactDescriptorsSummary> sites_summaries;
 		std::vector<CellContactDescriptorsSummary> cells_summaries;
 		TotalCellContactDescriptorsSummary total_cells_summary;
 		std::vector<ContactDescriptorSummary> contacts_summaries_with_redundancy_in_periodic_box;
@@ -280,6 +338,7 @@ public:
 			contacts_summaries.clear();
 			adjuncts_for_contacts_summaries.clear();
 			total_contacts_summary=TotalContactDescriptorsSummary();
+			sites_summaries.clear();
 			cells_summaries.clear();
 			total_cells_summary=TotalCellContactDescriptorsSummary();
 			contacts_summaries_with_redundancy_in_periodic_box.clear();
@@ -291,12 +350,15 @@ public:
 	struct ResultGraphics
 	{
 		std::vector<RadicalTessellationContactConstruction::ContactDescriptorGraphics> contacts_graphics;
+		std::vector<SubdividedIcosahedronCut::GraphicsBundle> sas_graphics;
 	};
 
 	struct GroupedResult
 	{
 		std::vector<UnsignedInt> grouped_contacts_representative_ids;
 		std::vector<TotalContactDescriptorsSummary> grouped_contacts_summaries;
+		std::vector<UnsignedInt> grouped_sites_representative_ids;
+		std::vector<TotalSiteContactDescriptorsSummary> grouped_sites_summaries;
 		std::vector<UnsignedInt> grouped_cells_representative_ids;
 		std::vector<TotalCellContactDescriptorsSummary> grouped_cells_summaries;
 
@@ -304,8 +366,34 @@ public:
 		{
 			grouped_contacts_representative_ids.clear();
 			grouped_contacts_summaries.clear();
+			grouped_sites_representative_ids.clear();
+			grouped_sites_summaries.clear();
 			grouped_cells_representative_ids.clear();
 			grouped_cells_summaries.clear();
+		}
+	};
+
+	struct ParametersForGeneratingSummaries
+	{
+		bool summarize_sites;
+		bool summarize_cells;
+
+		ParametersForGeneratingSummaries() noexcept : summarize_sites(false), summarize_cells(false)
+		{
+		}
+
+		ParametersForGeneratingSummaries(const bool summarize_sites, const bool summarize_cells) noexcept : summarize_sites(summarize_sites), summarize_cells(summarize_cells)
+		{
+		}
+	};
+
+	struct ParametersForAdjunctMaxCircleRadiusRestrictions
+	{
+		std::vector<Float> radius_restrictions;
+		std::vector<int> grouping_of_spheres_for_skipping;
+
+		ParametersForAdjunctMaxCircleRadiusRestrictions() noexcept
+		{
 		}
 	};
 
@@ -398,6 +486,34 @@ public:
 		}
 	};
 
+	struct ParametersForGraphics
+	{
+		bool with_graphics;
+		bool with_sas_graphics_if_possible;
+		Float length_step;
+		UnsignedInt sas_subdivision_depth;
+
+		ParametersForGraphics() noexcept :
+				with_graphics(false), with_sas_graphics_if_possible(false), length_step(FLOATCONST(0.2)), sas_subdivision_depth(3)
+		{
+		}
+
+		explicit ParametersForGraphics(const bool with_graphics) noexcept :
+				with_graphics(with_graphics), with_sas_graphics_if_possible(false), length_step(FLOATCONST(0.2)), sas_subdivision_depth(3)
+		{
+		}
+
+		ParametersForGraphics(const bool with_graphics, const bool with_sas_graphics_if_possible) noexcept :
+				with_graphics(with_graphics), with_sas_graphics_if_possible(with_sas_graphics_if_possible), length_step(FLOATCONST(0.2)), sas_subdivision_depth(3)
+		{
+		}
+
+		ParametersForGraphics(const bool with_graphics, const bool with_sas_graphics_if_possible, const Float length_step, const UnsignedInt sas_subdivision_depth) noexcept :
+				with_graphics(with_graphics), with_sas_graphics_if_possible(with_sas_graphics_if_possible), length_step(length_step), sas_subdivision_depth(sas_subdivision_depth)
+		{
+		}
+	};
+
 	static void construct_full_tessellation(
 			const std::vector<SimpleSphere>& input_spheres,
 			Result& result) noexcept
@@ -406,7 +522,7 @@ public:
 		SpheresContainer spheres_container;
 		spheres_container.init(input_spheres, time_recorder);
 		ResultGraphics result_graphics;
-		construct_full_tessellation(spheres_container, std::vector<int>(), std::vector<int>(), false, false, true, FLOATCONST(0.0), std::vector<Float>(), result, result_graphics, time_recorder);
+		construct_full_tessellation(spheres_container, std::vector<int>(), std::vector<int>(), false, ParametersForGraphics(false), ParametersForGeneratingSummaries(false, true), FLOATCONST(0.0), ParametersForAdjunctMaxCircleRadiusRestrictions(), result, result_graphics, time_recorder);
 	}
 
 	static void construct_full_tessellation(
@@ -418,7 +534,7 @@ public:
 		SpheresContainer spheres_container;
 		spheres_container.init(input_spheres, time_recorder);
 		ResultGraphics result_graphics;
-		construct_full_tessellation(spheres_container, std::vector<int>(), grouping_of_spheres, false, false, grouping_of_spheres.empty(), FLOATCONST(0.0), std::vector<Float>(), result, result_graphics, time_recorder);
+		construct_full_tessellation(spheres_container, std::vector<int>(), grouping_of_spheres, false, ParametersForGraphics(false), ParametersForGeneratingSummaries(false, grouping_of_spheres.empty()), FLOATCONST(0.0), ParametersForAdjunctMaxCircleRadiusRestrictions(), result, result_graphics, time_recorder);
 	}
 
 	static void construct_full_tessellation(
@@ -430,7 +546,7 @@ public:
 		SpheresContainer spheres_container;
 		spheres_container.init(input_spheres, periodic_box, time_recorder);
 		ResultGraphics result_graphics;
-		construct_full_tessellation(spheres_container, std::vector<int>(), std::vector<int>(), false, false, true, FLOATCONST(0.0), std::vector<Float>(), result, result_graphics, time_recorder);
+		construct_full_tessellation(spheres_container, std::vector<int>(), std::vector<int>(), false, ParametersForGraphics(false), ParametersForGeneratingSummaries(false, true), FLOATCONST(0.0), ParametersForAdjunctMaxCircleRadiusRestrictions(), result, result_graphics, time_recorder);
 	}
 
 	static void construct_full_tessellation(
@@ -443,7 +559,7 @@ public:
 		SpheresContainer spheres_container;
 		spheres_container.init(input_spheres, periodic_box, time_recorder);
 		ResultGraphics result_graphics;
-		construct_full_tessellation(spheres_container, std::vector<int>(), std::vector<int>(), with_tessellation_net, false, true, FLOATCONST(0.0), std::vector<Float>(), result, result_graphics, time_recorder);
+		construct_full_tessellation(spheres_container, std::vector<int>(), std::vector<int>(), with_tessellation_net, ParametersForGraphics(false), ParametersForGeneratingSummaries(false, true), FLOATCONST(0.0), ParametersForAdjunctMaxCircleRadiusRestrictions(), result, result_graphics, time_recorder);
 	}
 
 	static void construct_full_tessellation(
@@ -456,20 +572,33 @@ public:
 		SpheresContainer spheres_container;
 		spheres_container.init(input_spheres, periodic_box, time_recorder);
 		ResultGraphics result_graphics;
-		construct_full_tessellation(spheres_container, std::vector<int>(), grouping_of_spheres, false, false, grouping_of_spheres.empty(), FLOATCONST(0.0), std::vector<Float>(), result, result_graphics, time_recorder);
+		construct_full_tessellation(spheres_container, std::vector<int>(), grouping_of_spheres, false, ParametersForGraphics(false), ParametersForGeneratingSummaries(false, grouping_of_spheres.empty()), FLOATCONST(0.0), ParametersForAdjunctMaxCircleRadiusRestrictions(), result, result_graphics, time_recorder);
 	}
 
 	static void construct_full_tessellation(
 			const SpheresContainer& spheres_container,
 			const std::vector<int>& grouping_of_spheres,
 			const bool with_tessellation_net,
-			const bool with_graphics,
-			const bool summarize_cells,
+			const ParametersForGraphics& parameters_for_graphics,
+			const ParametersForGeneratingSummaries& parameters_for_generating_summaries,
 			Result& result,
 			ResultGraphics& result_graphics,
 			TimeRecorder& time_recorder) noexcept
 	{
-		construct_full_tessellation(spheres_container, std::vector<int>(), grouping_of_spheres, with_tessellation_net, with_graphics, summarize_cells, FLOATCONST(0.0), std::vector<Float>(), result, result_graphics, time_recorder);
+		construct_full_tessellation(spheres_container, std::vector<int>(), grouping_of_spheres, with_tessellation_net, parameters_for_graphics, parameters_for_generating_summaries, FLOATCONST(0.0), ParametersForAdjunctMaxCircleRadiusRestrictions(), result, result_graphics, time_recorder);
+	}
+
+	static void construct_full_tessellation(
+			const SpheresContainer& spheres_container,
+			const SpheresContainer::ResultOfPreparationForTessellation& preparation_result,
+			const bool with_tessellation_net,
+			const ParametersForGraphics& parameters_for_graphics,
+			const ParametersForGeneratingSummaries& parameters_for_generating_summaries,
+			Result& result,
+			ResultGraphics& result_graphics,
+			TimeRecorder& time_recorder) noexcept
+	{
+		construct_full_tessellation(spheres_container, preparation_result, with_tessellation_net, parameters_for_graphics, parameters_for_generating_summaries, FLOATCONST(0.0), ParametersForAdjunctMaxCircleRadiusRestrictions(), ParametersForPreliminaryCuts(), result, result_graphics, time_recorder);
 	}
 
 	static void construct_full_tessellation(
@@ -477,15 +606,15 @@ public:
 			const std::vector<int>& involvement_of_spheres,
 			const std::vector<int>& grouping_of_spheres,
 			const bool with_tessellation_net,
-			const bool with_graphics,
-			const bool summarize_cells,
+			const ParametersForGraphics& parameters_for_graphics,
+			const ParametersForGeneratingSummaries& parameters_for_generating_summaries,
 			const Float max_circle_radius_restriction,
-			const std::vector<Float>& adjunct_max_circle_radius_restrictions,
+			const ParametersForAdjunctMaxCircleRadiusRestrictions& parameters_for_adjunct_max_circle_radius_restrictions,
 			Result& result,
 			ResultGraphics& result_graphics,
 			TimeRecorder& time_recorder) noexcept
 	{
-		construct_full_tessellation(spheres_container, involvement_of_spheres, grouping_of_spheres, with_tessellation_net, with_graphics, summarize_cells, max_circle_radius_restriction, adjunct_max_circle_radius_restrictions, ParametersForPreliminaryCuts(), result, result_graphics, time_recorder);
+		construct_full_tessellation(spheres_container, involvement_of_spheres, grouping_of_spheres, with_tessellation_net, parameters_for_graphics, parameters_for_generating_summaries, max_circle_radius_restriction, parameters_for_adjunct_max_circle_radius_restrictions, ParametersForPreliminaryCuts(), result, result_graphics, time_recorder);
 	}
 
 	static void construct_full_tessellation(
@@ -493,10 +622,28 @@ public:
 			const std::vector<int>& involvement_of_spheres,
 			const std::vector<int>& grouping_of_spheres,
 			const bool with_tessellation_net,
-			const bool with_graphics,
-			const bool summarize_cells,
+			const ParametersForGraphics& parameters_for_graphics,
+			const ParametersForGeneratingSummaries& parameters_for_generating_summaries,
 			const Float max_circle_radius_restriction,
-			const std::vector<Float>& adjunct_max_circle_radius_restrictions,
+			const ParametersForAdjunctMaxCircleRadiusRestrictions& parameters_for_adjunct_max_circle_radius_restrictions,
+			const ParametersForPreliminaryCuts& parameters_for_preliminary_cuts,
+			Result& result,
+			ResultGraphics& result_graphics,
+			TimeRecorder& time_recorder) noexcept
+	{
+		SpheresContainer::ResultOfPreparationForTessellation preparation_result;
+		spheres_container.prepare_for_tessellation(involvement_of_spheres, grouping_of_spheres, preparation_result, time_recorder);
+		construct_full_tessellation(spheres_container, preparation_result, with_tessellation_net, parameters_for_graphics, parameters_for_generating_summaries, max_circle_radius_restriction, parameters_for_adjunct_max_circle_radius_restrictions, parameters_for_preliminary_cuts, result, result_graphics, time_recorder);
+	}
+
+	static void construct_full_tessellation(
+			const SpheresContainer& spheres_container,
+			const SpheresContainer::ResultOfPreparationForTessellation& preparation_result,
+			const bool with_tessellation_net,
+			const ParametersForGraphics& parameters_for_graphics,
+			const ParametersForGeneratingSummaries& parameters_for_generating_summaries,
+			const Float max_circle_radius_restriction,
+			const ParametersForAdjunctMaxCircleRadiusRestrictions& parameters_for_adjunct_max_circle_radius_restrictions,
 			const ParametersForPreliminaryCuts& parameters_for_preliminary_cuts,
 			Result& result,
 			ResultGraphics& result_graphics,
@@ -505,9 +652,6 @@ public:
 		time_recorder.reset();
 
 		result.clear();
-
-		SpheresContainer::ResultOfPreparationForTessellation preparation_result;
-		spheres_container.prepare_for_tessellation(involvement_of_spheres, grouping_of_spheres, preparation_result, time_recorder);
 
 		result_graphics=ResultGraphics();
 
@@ -527,7 +671,7 @@ public:
 		}
 
 		std::vector<RadicalTessellationContactConstruction::ContactDescriptorGraphics> possible_contacts_graphics;
-		if(with_graphics)
+		if(parameters_for_graphics.with_graphics)
 		{
 			possible_contacts_graphics.resize(possible_contacts_summaries.size());
 		}
@@ -569,9 +713,9 @@ public:
 					{
 						RadicalTessellationContactConstruction::construct_contact_descriptor_tessellation_vertices_and_edges(cd, possible_tessellation_subnets[i].tes_edges, possible_tessellation_subnets[i].tes_vertices);
 					}
-					if(with_graphics)
+					if(parameters_for_graphics.with_graphics)
 					{
-						RadicalTessellationContactConstruction::construct_contact_descriptor_graphics(cd, 0.2, possible_contacts_graphics[i]);
+						RadicalTessellationContactConstruction::construct_contact_descriptor_graphics(cd, parameters_for_graphics.length_step, possible_contacts_graphics[i]);
 					}
 				}
 			}
@@ -616,12 +760,14 @@ public:
 			}
 		}
 
-		if(!adjunct_max_circle_radius_restrictions.empty())
+		if(!parameters_for_adjunct_max_circle_radius_restrictions.radius_restrictions.empty())
 		{
 			const UnsignedInt number_of_applications_of_preliminary_cuts=(!apply_preliminary_cuts_with_all_masks ? static_cast<UnsignedInt>(1) : parameters_for_preliminary_cuts.calculate_number_of_possible_masks());
 
+			const std::vector<int>& groups_for_skipping=parameters_for_adjunct_max_circle_radius_restrictions.grouping_of_spheres_for_skipping;
+
 			result.adjuncts_for_contacts_summaries.clear();
-			result.adjuncts_for_contacts_summaries.resize(result.contacts_summaries.size(), ContactDescriptorSummaryAdjunct(adjunct_max_circle_radius_restrictions.size()*number_of_applications_of_preliminary_cuts));
+			result.adjuncts_for_contacts_summaries.resize(result.contacts_summaries.size(), ContactDescriptorSummaryAdjunct(parameters_for_adjunct_max_circle_radius_restrictions.radius_restrictions.size()*number_of_applications_of_preliminary_cuts));
 
 #ifdef VORONOTALT_OPENMP
 #pragma omp parallel
@@ -638,7 +784,11 @@ public:
 				for(UnsignedInt i=0;i<result.contacts_summaries.size();i++)
 				{
 					const ContactDescriptorSummary& cds=result.contacts_summaries[i];
-					if(cds.area>FLOATCONST(0.0))
+					if(cds.area<=FLOATCONST(0.0) || (!groups_for_skipping.empty() && groups_for_skipping.size()==spheres_container.input_spheres().size() && groups_for_skipping[cds.id_a%groups_for_skipping.size()]==groups_for_skipping[cds.id_b%groups_for_skipping.size()]))
+					{
+						result.adjuncts_for_contacts_summaries[i].level_areas.clear();
+					}
+					else
 					{
 						UnsignedInt lindex=0;
 						for(UnsignedInt k=0;k<number_of_applications_of_preliminary_cuts;k++)
@@ -653,9 +803,9 @@ public:
 							}
 							ContactDescriptorSummaryAdjunct& cdsa=result.adjuncts_for_contacts_summaries[i];
 							Float prev_circle_radius_restriction=0.0;
-							for(UnsignedInt j=0;j<adjunct_max_circle_radius_restrictions.size();j++)
+							for(UnsignedInt j=0;j<parameters_for_adjunct_max_circle_radius_restrictions.radius_restrictions.size();j++)
 							{
-								const Float circle_radius_restriction=(max_circle_radius_restriction>FLOATCONST(0.0) ? std::min(adjunct_max_circle_radius_restrictions[j], max_circle_radius_restriction) : adjunct_max_circle_radius_restrictions[j]);
+								const Float circle_radius_restriction=(max_circle_radius_restriction>FLOATCONST(0.0) ? std::min(parameters_for_adjunct_max_circle_radius_restrictions.radius_restrictions[j], max_circle_radius_restriction) : parameters_for_adjunct_max_circle_radius_restrictions.radius_restrictions[j]);
 								if(j==0 || (circle_radius_restriction>=prev_circle_radius_restriction)
 										|| (circle_radius_restriction<prev_circle_radius_restriction && cdsa.level_areas[lindex-1].area>FLOATCONST(0.0)))
 								{
@@ -738,7 +888,7 @@ public:
 			time_recorder.record_elapsed_miliseconds_and_reset("assemble valid contacts tessellation net");
 		}
 
-		if(with_graphics)
+		if(parameters_for_graphics.with_graphics)
 		{
 			result_graphics.contacts_graphics.resize(ids_of_valid_pairs.size());
 
@@ -865,7 +1015,30 @@ public:
 
 		time_recorder.record_elapsed_miliseconds_and_reset("accumulate total contacts summary");
 
-		if(summarize_cells && grouping_of_spheres.empty())
+		if(parameters_for_generating_summaries.summarize_sites)
+		{
+			std::vector<SiteContactDescriptorsSummary> all_sites_summaries(result.total_spheres);
+			for(UnsignedInt i=0;i<result.contacts_summaries.size();i++)
+			{
+				const ContactDescriptorSummary& cds=result.contacts_summaries[i];
+				all_sites_summaries[cds.id_a].id=cds.id_a;
+				all_sites_summaries[cds.id_a].add(cds);
+				all_sites_summaries[cds.id_b].id=cds.id_b;
+				all_sites_summaries[cds.id_b].add(cds);
+			}
+			result.sites_summaries.reserve(result.total_spheres);
+			for(UnsignedInt i=0;i<all_sites_summaries.size();i++)
+			{
+				if(all_sites_summaries[i].area>0.0)
+				{
+					result.sites_summaries.push_back(all_sites_summaries[i]);
+				}
+			}
+		}
+
+		time_recorder.record_elapsed_miliseconds_and_reset("accumulate site summaries");
+
+		if(parameters_for_generating_summaries.summarize_cells && !preparation_result.collision_ids_constrained)
 		{
 			const std::vector<ContactDescriptorSummary>& all_contacts_summaries=(result.contacts_summaries_with_redundancy_in_periodic_box.empty() ? result.contacts_summaries : result.contacts_summaries_with_redundancy_in_periodic_box);
 
@@ -903,6 +1076,53 @@ public:
 			}
 
 			time_recorder.record_elapsed_miliseconds_and_reset("accumulate total cells summary");
+
+			if(parameters_for_graphics.with_graphics && parameters_for_graphics.with_sas_graphics_if_possible)
+			{
+				result_graphics.sas_graphics.resize(result.cells_summaries.size());
+
+				std::vector< std::vector<SimpleSphere> > all_cutting_spheres(result_graphics.sas_graphics.size());
+				for(UnsignedInt i=0;i<all_contacts_summaries.size();i++)
+				{
+					const ContactDescriptorSummary& cds=all_contacts_summaries[i];
+					if(cds.id_a<result.total_spheres && cds.id_b<spheres_container.populated_spheres().size())
+					{
+						if(cds.id_a<all_cutting_spheres.size() && result.cells_summaries[cds.id_a].sas_area>FLOATCONST(0.0) && cds.id_b<spheres_container.populated_spheres().size())
+						{
+							all_cutting_spheres[cds.id_a].push_back(spheres_container.populated_spheres()[cds.id_b]);
+						}
+						if(cds.id_b<all_cutting_spheres.size() && result.cells_summaries[cds.id_b].sas_area>FLOATCONST(0.0) && cds.id_a<spheres_container.populated_spheres().size())
+						{
+							all_cutting_spheres[cds.id_b].push_back(spheres_container.populated_spheres()[cds.id_a]);
+						}
+					}
+				}
+
+#ifdef VORONOTALT_OPENMP
+#pragma omp parallel
+#endif
+				{
+					const voronotalt::SubdividedIcosahedron sih(parameters_for_graphics.sas_subdivision_depth);
+					voronotalt::SubdividedIcosahedronCut sihcut;
+
+#ifdef VORONOTALT_OPENMP
+#pragma omp for
+#endif
+					for(std::size_t i=0;i<result_graphics.sas_graphics.size();i++)
+					{
+						if(!all_cutting_spheres[i].empty())
+						{
+							sihcut.init(sih, spheres_container.populated_spheres()[i], all_cutting_spheres[i]);
+							if(!sihcut.graphics_bundle.empty())
+							{
+								result_graphics.sas_graphics[i]=sihcut.graphics_bundle;
+							}
+						}
+					}
+				}
+
+				time_recorder.record_elapsed_miliseconds_and_reset("generate sas mesh graphics");
+			}
 		}
 	}
 
@@ -966,7 +1186,72 @@ public:
 				time_recorder.record_elapsed_miliseconds_and_reset("grouped contacts summaries");
 			}
 
-			if(!full_result.cells_summaries.empty() && full_result.cells_summaries.size()==grouping_of_spheres.size())
+			if(!full_result.sites_summaries.empty())
+			{
+				grouped_result.grouped_sites_representative_ids.reserve(full_result.sites_summaries.size()/5);
+				grouped_result.grouped_sites_summaries.reserve(full_result.sites_summaries.size()/5);
+
+				std::vector<UnsignedInt> map_of_global_ids_to_site_ids(full_result.total_spheres, full_result.sites_summaries.size());
+				for(UnsignedInt i=0;i<full_result.sites_summaries.size();i++)
+				{
+					map_of_global_ids_to_site_ids[full_result.sites_summaries[i].id]=i;
+				}
+
+				std::map< int, UnsignedInt > map_of_groups;
+
+				for(UnsignedInt i=0;i<full_result.contacts_summaries.size();i++)
+				{
+					const ContactDescriptorSummary& cds=full_result.contacts_summaries[i];
+					if(cds.id_a<grouping_of_spheres.size() && cds.id_b<grouping_of_spheres.size() && grouping_of_spheres[cds.id_a]!=grouping_of_spheres[cds.id_b])
+					{
+						for(int j=0;j<2;j++)
+						{
+							const UnsignedInt global_id=(j==0 ? cds.id_a : cds.id_b);
+							const UnsignedInt site_id=map_of_global_ids_to_site_ids[global_id];
+							if(site_id<full_result.sites_summaries.size())
+							{
+								const int group_id=grouping_of_spheres[global_id];
+								UnsignedInt group_index=0;
+								std::map< int, UnsignedInt >::const_iterator it=map_of_groups.find(group_id);
+								if(it==map_of_groups.end())
+								{
+									group_index=grouped_result.grouped_sites_summaries.size();
+									grouped_result.grouped_sites_representative_ids.push_back(site_id);
+									grouped_result.grouped_sites_summaries.push_back(TotalSiteContactDescriptorsSummary());
+									map_of_groups[group_id]=group_index;
+								}
+								else
+								{
+									group_index=it->second;
+								}
+								grouped_result.grouped_sites_summaries[group_index].add(cds);
+							}
+						}
+					}
+				}
+
+				{
+					std::vector< std::pair<UnsignedInt, UnsignedInt> > reordering(grouped_result.grouped_sites_representative_ids.size());
+					for(UnsignedInt i=0;i<reordering.size();i++)
+					{
+						reordering[i]=std::pair<UnsignedInt, UnsignedInt>(grouped_result.grouped_sites_representative_ids[i], i);
+					}
+					std::sort(reordering.begin(), reordering.end());
+					std::vector<UnsignedInt> reordered_grouped_sites_representative_ids(reordering.size());
+					std::vector<TotalSiteContactDescriptorsSummary> reordered_grouped_sites_summaries(reordering.size());
+					for(UnsignedInt i=0;i<reordering.size();i++)
+					{
+						reordered_grouped_sites_representative_ids[i]=grouped_result.grouped_sites_representative_ids[reordering[i].second];
+						reordered_grouped_sites_summaries[i]=grouped_result.grouped_sites_summaries[reordering[i].second];
+					}
+					grouped_result.grouped_sites_representative_ids.swap(reordered_grouped_sites_representative_ids);
+					grouped_result.grouped_sites_summaries.swap(reordered_grouped_sites_summaries);
+				}
+
+				time_recorder.record_elapsed_miliseconds_and_reset("grouped sites summaries");
+			}
+
+			if(!full_result.cells_summaries.empty())
 			{
 				grouped_result.grouped_cells_representative_ids.reserve(full_result.cells_summaries.size()/5);
 				grouped_result.grouped_cells_summaries.reserve(full_result.cells_summaries.size()/5);
@@ -1001,6 +1286,206 @@ public:
 		}
 
 		return (!grouped_result.grouped_contacts_summaries.empty());
+	}
+
+	static bool restrict_result_contacts(const bool select_all, const std::vector<std::size_t>& indices, Result& result, ResultGraphics& result_graphics) noexcept
+	{
+		if(select_all)
+		{
+			return !result.contacts_summaries.empty();
+		}
+		if(indices.empty() || result.contacts_summaries.empty())
+		{
+			return false;
+		}
+		bool something_selected=false;
+		Result sub_result;
+		ResultGraphics sub_result_graphics;
+		sub_result.contacts_summaries.reserve(indices.size());
+		if(!result.contacts_canonical_ids_with_redundancy_in_periodic_box.empty())
+		{
+			sub_result.contacts_canonical_ids_with_redundancy_in_periodic_box.reserve(indices.size());
+		}
+		if(!result.contacts_summaries_with_redundancy_in_periodic_box.empty())
+		{
+			sub_result.contacts_summaries_with_redundancy_in_periodic_box.reserve(indices.size());
+		}
+		if(!result.adjuncts_for_contacts_summaries.empty())
+		{
+			sub_result.adjuncts_for_contacts_summaries.reserve(indices.size());
+		}
+		if(!result_graphics.contacts_graphics.empty())
+		{
+			sub_result_graphics.contacts_graphics.reserve(indices.size());
+		}
+		for(std::size_t i=0;i<indices.size();i++)
+		{
+			const std::size_t id=indices[i];
+			if(id<result.contacts_summaries.size())
+			{
+				something_selected=true;
+				sub_result.contacts_summaries.push_back(result.contacts_summaries[id]);
+				sub_result.total_contacts_summary.add(result.contacts_summaries[id]);
+				if(result.contacts_canonical_ids_with_redundancy_in_periodic_box.size()==result.contacts_summaries.size())
+				{
+					sub_result.contacts_canonical_ids_with_redundancy_in_periodic_box.push_back(result.contacts_canonical_ids_with_redundancy_in_periodic_box[id]);
+				}
+				if(result.contacts_summaries_with_redundancy_in_periodic_box.size()==result.contacts_summaries.size())
+				{
+					sub_result.contacts_summaries_with_redundancy_in_periodic_box.push_back(result.contacts_summaries_with_redundancy_in_periodic_box[id]);
+				}
+				if(result.adjuncts_for_contacts_summaries.size()==result.contacts_summaries.size())
+				{
+					sub_result.adjuncts_for_contacts_summaries.push_back(result.adjuncts_for_contacts_summaries[id]);
+				}
+				if(result_graphics.contacts_graphics.size()==result.contacts_summaries.size())
+				{
+					sub_result_graphics.contacts_graphics.push_back(result_graphics.contacts_graphics[id]);
+				}
+			}
+		}
+		if(something_selected
+				&& !result.contacts_canonical_ids_with_redundancy_in_periodic_box.empty()
+				&& result.contacts_canonical_ids_with_redundancy_in_periodic_box.size()!=result.contacts_summaries.size()
+				&& result.contacts_canonical_ids_with_redundancy_in_periodic_box.size()==result.contacts_summaries_with_redundancy_in_periodic_box.size())
+		{
+			std::vector<bool> map_of_inclusion(result.contacts_summaries.size(), false);
+			for(std::size_t i=0;i<indices.size();i++)
+			{
+				const std::size_t id=indices[i];
+				if(id<map_of_inclusion.size())
+				{
+					map_of_inclusion[id]=true;
+				}
+			}
+			for(std::size_t i=0;i<result.contacts_canonical_ids_with_redundancy_in_periodic_box.size();i++)
+			{
+				const std::size_t oid=result.contacts_canonical_ids_with_redundancy_in_periodic_box[i];
+				if(oid<map_of_inclusion.size() && map_of_inclusion[oid])
+				{
+					sub_result.contacts_canonical_ids_with_redundancy_in_periodic_box.push_back(result.contacts_canonical_ids_with_redundancy_in_periodic_box[i]);
+					sub_result.contacts_summaries_with_redundancy_in_periodic_box.push_back(result.contacts_summaries_with_redundancy_in_periodic_box[i]);
+					if(result.adjuncts_for_contacts_summaries.size()==result.contacts_canonical_ids_with_redundancy_in_periodic_box.size())
+					{
+						sub_result.adjuncts_for_contacts_summaries.push_back(result.adjuncts_for_contacts_summaries[i]);
+					}
+					if(result_graphics.contacts_graphics.size()==result.contacts_canonical_ids_with_redundancy_in_periodic_box.size())
+					{
+						sub_result_graphics.contacts_graphics.push_back(result_graphics.contacts_graphics[i]);
+					}
+				}
+			}
+		}
+		if(something_selected && !result.sites_summaries.empty())
+		{
+			std::vector<SiteContactDescriptorsSummary> all_sites_summaries(result.total_spheres);
+			for(UnsignedInt i=0;i<sub_result.contacts_summaries.size();i++)
+			{
+				const ContactDescriptorSummary& cds=sub_result.contacts_summaries[i];
+				all_sites_summaries[cds.id_a].id=cds.id_a;
+				all_sites_summaries[cds.id_a].add(cds);
+				all_sites_summaries[cds.id_b].id=cds.id_b;
+				all_sites_summaries[cds.id_b].add(cds);
+			}
+			sub_result.sites_summaries.reserve(result.total_spheres);
+			for(UnsignedInt i=0;i<all_sites_summaries.size();i++)
+			{
+				if(all_sites_summaries[i].area>0.0)
+				{
+					sub_result.sites_summaries.push_back(all_sites_summaries[i]);
+				}
+			}
+		}
+		if(something_selected)
+		{
+			result.contacts_summaries.swap(sub_result.contacts_summaries);
+			result.contacts_canonical_ids_with_redundancy_in_periodic_box.swap(sub_result.contacts_canonical_ids_with_redundancy_in_periodic_box);
+			result.contacts_summaries_with_redundancy_in_periodic_box.swap(sub_result.contacts_summaries_with_redundancy_in_periodic_box);
+			result.adjuncts_for_contacts_summaries.swap(sub_result.adjuncts_for_contacts_summaries);
+			result.total_contacts_summary=sub_result.total_contacts_summary;
+			result.sites_summaries.swap(sub_result.sites_summaries);
+			result_graphics.contacts_graphics.swap(sub_result_graphics.contacts_graphics);
+		}
+		return something_selected;
+	}
+
+	static bool restrict_result_sites(const bool select_all, const std::vector<std::size_t>& indices, Result& result) noexcept
+	{
+		if(select_all)
+		{
+			return !result.sites_summaries.empty();
+		}
+		if(indices.empty() || result.sites_summaries.empty())
+		{
+			return false;
+		}
+		bool something_selected=false;
+		Result sub_result;
+		sub_result.sites_summaries.reserve(indices.size());
+		std::vector<int> lookup(result.total_spheres, 0);
+		for(std::size_t i=0;i<indices.size();i++)
+		{
+			const std::size_t id=indices[i];
+			if(id<lookup.size())
+			{
+				lookup[id]=1;
+			}
+		}
+		for(std::size_t i=0;i<result.sites_summaries.size();i++)
+		{
+			const std::size_t id=result.sites_summaries[i].id;
+			if(id<lookup.size() && lookup[id]>0)
+			{
+				something_selected=true;
+				sub_result.sites_summaries.push_back(result.sites_summaries[i]);
+			}
+		}
+		if(something_selected)
+		{
+			result.sites_summaries.swap(sub_result.sites_summaries);
+		}
+		return something_selected;
+	}
+
+	static bool restrict_result_cells(const bool select_all, const std::vector<std::size_t>& indices, Result& result, ResultGraphics& result_graphics) noexcept
+	{
+		if(select_all)
+		{
+			return !result.cells_summaries.empty();
+		}
+		if(indices.empty() || result.cells_summaries.empty())
+		{
+			return false;
+		}
+		bool something_selected=false;
+		Result sub_result;
+		ResultGraphics sub_result_graphics;
+		sub_result.cells_summaries.reserve(indices.size());
+		if(!result_graphics.sas_graphics.empty())
+		{
+			sub_result_graphics.sas_graphics.reserve(indices.size());
+		}
+		for(std::size_t i=0;i<indices.size();i++)
+		{
+			const std::size_t id=indices[i];
+			if(id<result.cells_summaries.size())
+			{
+				something_selected=true;
+				sub_result.cells_summaries.push_back(result.cells_summaries[id]);
+				sub_result.total_cells_summary.add(result.cells_summaries[id]);
+				if(result_graphics.sas_graphics.size()==result.cells_summaries.size())
+				{
+					sub_result_graphics.sas_graphics.push_back(result_graphics.sas_graphics[id]);
+				}
+			}
+		}
+		if(something_selected)
+		{
+			result.cells_summaries.swap(sub_result.cells_summaries);
+			result.total_cells_summary=sub_result.total_cells_summary;
+			result_graphics.sas_graphics.swap(sub_result_graphics.sas_graphics);
+		}
+		return something_selected;
 	}
 };
 
