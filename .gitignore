@@ -5,3 +5,4 @@
 /dist/
 /voronotalt.egg-info/
 /workvenv/
+/tests/testvenv/
