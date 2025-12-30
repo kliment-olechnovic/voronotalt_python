@@ -12,3 +12,6 @@
 
 7) run ./prep/run_python_build_and_twine.bash
 
+8) if twine was not executed from ./prep/run_python_build_and_twine.bash, execute it manually from the terminal
+
+9) run ./tests/run_all_tests.bash
